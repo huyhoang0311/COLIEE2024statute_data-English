@@ -45,13 +45,15 @@ else:
 # Truy vấn tìm kiếm
 query = "A special provision that releases warranty can be made, but in that situation, when there are rights that the seller establishes on his/her own for a third party, the seller is not released of warranty."
 
-
 # Áp dụng BM25 nếu corpus hợp lệ
 if corpus:
     scores = apply_bm25(corpus, query)
 
-    # In kết quả xếp hạng các văn bản
-    for idx, score in enumerate(scores):
-        print(f"Document {idx+1}: Score {score}")
+    # Lấy top 3 bài viết có điểm số cao nhất
+    top_3_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:3]
+
+    # In kết quả top 3 bài viết
+    for idx in top_3_idx:
+        print(f"Articles {idx+1}: Score {scores[idx]}")
 else:
     print("Không có văn bản để xử lý.")
