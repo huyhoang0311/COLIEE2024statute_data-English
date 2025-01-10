@@ -8,6 +8,7 @@ from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import MultiLabelBinarizer
 
 
 def split_into_articles_from_file(file_path):
@@ -29,7 +30,7 @@ def predict_with_tree_and_similarity(query):
     query_vector = vectorizer.transform(query)  # Mã hóa query mới
 
     # Sử dụng Decision Tree để dự đoán
-    predicted_label = clf.predict(query_vector)
+    predicted_label = clf.predict_proba(query_vector)
 
     return predicted_label
 
@@ -59,6 +60,10 @@ for doc in corpus:
     lemmatized_text = " ".join([lemmatizer.lemmatize(word, pos='v') for word in doc.split()])
     processed_corpus.append(lemmatized_text)
 
+#Multi-label solution:
+mlb = MultiLabelBinarizer()
+label_bin = mlb.fit_transform(labels)
+
 #Stop word:
 custom_stopwords = list(set(ENGLISH_STOP_WORDS).union(set(string.digits)))
 vectorizer = TfidfVectorizer(stop_words = custom_stopwords)
@@ -67,7 +72,7 @@ article_vectors = vectorizer.fit_transform(processed_corpus)
 
 # Huấn luyện RFC trên các vector của các bài viết
 clf = RandomForestClassifier(n_estimators=100, random_state=42)
-clf.fit(article_vectors, labels)
+clf.fit(article_vectors, label_bin)
 
 
 
