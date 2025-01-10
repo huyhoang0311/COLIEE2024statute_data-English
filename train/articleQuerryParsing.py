@@ -32,7 +32,7 @@ def apply_bm25(corpus, query):
     return scores
 
 # Đọc và xử lý file JSON
-file_path = 'C:/Users/ADMIN/.vscode/py/coliee-2024/COLIEE2024statute_data-English/text/articles.json'  # Thay 'your_file.json' bằng đường dẫn file JSON của bạn
+file_path = r'text\articles.json'  # Thay 'your_file.json' bằng đường dẫn file JSON của bạn
 data = load_json_file(file_path)
 
 # Kiểm tra dữ liệu đã được load chính xác
