@@ -1,4 +1,3 @@
-
 import re
 import json
 import string
@@ -36,7 +35,7 @@ def predict_with_tree_and_similarity(queries):
 
     return predicted_label_proba
 
-json_path = r'text\articles.json'
+json_path = r'text/articles.json'
 
 # Khởi tạo lemmatizer
 lemmatizer = WordNetLemmatizer()
