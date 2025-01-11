@@ -3,12 +3,15 @@ import re
 import json
 import string
 import nltk
+import numpy as np
 from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def split_into_articles_from_file(file_path):
@@ -18,7 +21,6 @@ def split_into_articles_from_file(file_path):
 
     # Loại bỏ các dòng bắt đầu bằng "Chapter" và "Section"
     text = '\n'.join([line for line in text.split('\n') if not (line.startswith('Chapter') or line.startswith('Section'))])
-    print(text)
     # Loại bỏ các dòng bắt đầu bằng "(" và sau đó là chữ
     text = '\n'.join([line for line in text.split('\n') if not re.match(r'^\(\s*[a-zA-Z]', line.lstrip())])
     
@@ -26,13 +28,13 @@ def split_into_articles_from_file(file_path):
     articles = re.findall(r'(Article \d[\-\d]*\s+.*?)(?=\nArticle \d|\Z)', text, re.DOTALL)
     return articles
 
-def predict_with_tree_and_similarity(query):
-    query_vector = vectorizer.transform(query)  # Mã hóa query mới
+def predict_with_tree_and_similarity(queries):
+    queries_vector = vectorizer.transform(queries)  # Mã hóa query mới
+    queries = queries_vector.toarray()
+    #Sử dụng Decision Tree để dự đoán
+    predicted_label_proba = clf.predict_proba(queries)
 
-    # Sử dụng Decision Tree để dự đoán
-    predicted_label = clf.predict_proba(query_vector)
-
-    return predicted_label
+    return predicted_label_proba
 
 json_path = r'text\articles.json'
 
@@ -62,6 +64,8 @@ for doc in corpus:
 
 #Multi-label solution:
 mlb = MultiLabelBinarizer()
+for i, label in enumerate(labels):
+    labels[i] = [label]
 label_bin = mlb.fit_transform(labels)
 
 #Stop word:
@@ -69,22 +73,24 @@ custom_stopwords = list(set(ENGLISH_STOP_WORDS).union(set(string.digits)))
 vectorizer = TfidfVectorizer(stop_words = custom_stopwords)
 article_vectors = vectorizer.fit_transform(processed_corpus)
 
-
 # Huấn luyện RFC trên các vector của các bài viết
-clf = RandomForestClassifier(n_estimators=100, random_state=42)
+clf = OneVsRestClassifier(RandomForestClassifier(n_estimators=100, random_state=42))
 clf.fit(article_vectors, label_bin)
 
 
 
 queries = [
-    "A special provision that releases warranty can be made, but in that situation, when there are rights that the seller establishes on his/her own for a third party, the seller is not released of warranty."
+    "(1) Private rights must be congruent with the public welfare.\n (2) The exercise of rights and performance of duties must be done in good faith.\n(3)",
+    "A compulsory auction is also a sale, so warranty is imposed the same as for an ordinary sale."
+
 ]
-print(type(queries))
+
 # Tien xu ly query
 processed_queries = []
 for doc in queries:
     lemmatized_text = " ".join([lemmatizer.lemmatize(word, pos='v') for word in doc.split()])
     processed_queries.append(lemmatized_text)
-result = predict_with_tree_and_similarity(processed_queries)
 
+
+result = predict_with_tree_and_similarity(processed_queries)
 print(result)
