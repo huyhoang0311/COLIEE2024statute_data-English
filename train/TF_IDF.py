@@ -1,4 +1,4 @@
-
+ 
 import re
 import json
 import string
@@ -36,13 +36,15 @@ def predict_with_tree_and_similarity(queries):
 
     return predicted_label_proba
 
-json_path = r'text\articles.json'
+articles_path = r'text\articles.json'
+traning_path = r"/train\TrainingData.json"
 
 # Khởi tạo lemmatizer
 lemmatizer = WordNetLemmatizer()
-with open(json_path, 'r') as file:
-    temp = json.load(file)
-corpus = [item for item in temp]
+
+with open(articles_path, 'r') as file:
+    temp_articles = json.load(file)
+corpus = [item for item in temp_articles]
 # Mảng lưu các nhãn (số)
 labels = []
 
@@ -56,16 +58,24 @@ for idx, article in enumerate(corpus):
     # Loại bỏ tất cả các số từ văn bản
     corpus[idx] = re.sub(r'\b\d+\b', '', article)
 
+with open(traning_path, 'r') as training_file:
+    temp_trainingData = json.load(training_file)
+    for item in temp_trainingData[0]:
+        corpus.append(item)
+    
 
 processed_corpus = []
 for doc in corpus:
     lemmatized_text = " ".join([lemmatizer.lemmatize(word, pos='v') for word in doc.split()])
     processed_corpus.append(lemmatized_text)
+    
 
 #Multi-label solution:
 mlb = MultiLabelBinarizer()
 for i, label in enumerate(labels):
     labels[i] = [label]
+for item in temp_trainingData[0]:
+        labels.append(temp_trainingData[0][item])
 label_bin = mlb.fit_transform(labels)
 
 #Stop word:
@@ -93,4 +103,5 @@ for doc in queries:
 
 
 result = predict_with_tree_and_similarity(processed_queries)
+
 print(result)

@@ -1,24 +1,15 @@
 from bs4 import BeautifulSoup 
-<<<<<<< HEAD
-
-
-=======
 import pandas as pd
 import json 
 import re
 import os
 
 pairs = []
->>>>>>> 3a92c2b81c51ef122c592433cc51b7f148f2eaae
 def solve_xml(file_path) :
    #file_path = "/kaggle/input/datacoliee/ColieeData/train/riteval_H18_en.xml"
 
     with open (file_path,'r') as f :
-<<<<<<< HEAD
-     data = f.read()
-=======
         data = f.read()
->>>>>>> 3a92c2b81c51ef122c592433cc51b7f148f2eaae
 
     # passing data inside the beautifulsoup parser
     bs_data = BeautifulSoup(data, "xml")
@@ -32,18 +23,6 @@ def solve_xml(file_path) :
     keys = []
     for text in bs_t2 :
         keys.append(text.get_text())
-<<<<<<< HEAD
-    pairs = []
-    
-    for key,value in zip(keys,values):
-        lines = value.splitlines()  # Tách đoạn văn bản thành danh sách các dòng
-        article_lines = [line for line in lines if line.strip().startswith("Article")]  # Lọc các dòng bắt đầu bằng "Article"
-        pairs.append((key,article_lines))
-    return pairs 
-    
-file_path = "/kaggle/input/datacoliee/ColieeData/train/riteval_H18_en.xml"
-solve_xml(file_path)
-=======
    
     
     for key,value in zip(keys,values):
@@ -82,4 +61,3 @@ with open(file_path, 'w') as f:
     json.dump([result_dict], f, indent=4)  # Ghi dữ liệu vào dưới dạng danh sách
 
 print(f"Đã thêm dữ liệu vào {file_path}")
->>>>>>> 3a92c2b81c51ef122c592433cc51b7f148f2eaae
