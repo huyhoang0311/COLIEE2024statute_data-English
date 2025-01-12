@@ -13,7 +13,6 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-
 def split_into_articles_from_file(file_path):
     # Đọc nội dung từ file
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -36,8 +35,8 @@ def predict_with_tree_and_similarity(queries):
 
     return predicted_label_proba
 
-articles_path = r'text\articlesFull.json'
-traning_path = r"train\TrainingData.json"
+articles_path = r'text/articlesFull.json'
+traning_path = r"text/TrainingData.json"
 
 # Khởi tạo lemmatizer
 lemmatizer = WordNetLemmatizer()
