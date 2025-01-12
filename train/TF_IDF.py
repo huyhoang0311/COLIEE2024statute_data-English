@@ -1,3 +1,4 @@
+ 
 import re
 import json
 import string
@@ -35,7 +36,8 @@ def predict_with_tree_and_similarity(queries):
 
     return predicted_label_proba
 
-json_path = r'text/articles.json'
+articles_path = r'text\articlesFull.json'
+traning_path = r"train\TrainingData.json"
 
 # Khởi tạo lemmatizer
 lemmatizer = WordNetLemmatizer()
@@ -45,16 +47,20 @@ with open(articles_path, 'r') as file:
 corpus = [item for item in temp_articles]
 # Mảng lưu các nhãn (số)
 labels = []
+classes = []
 
 # Duyệt qua từng chuỗi trong data và trích xuất số ngay sau từ "Article"
 for idx, article in enumerate(corpus):
     # Tìm số ngay sau từ "Article"
     match = re.search(r'Article (\S+)', article)
     if match:
-        # Nếu tìm thấy, lấy số đầu tiên và chuyển thành kiểu int
+        # Nếu tìm thấy, lấy số đầu tiên
         labels.append((match.group(1)))
+        classes.append((match.group(1)))
     # Loại bỏ tất cả các số từ văn bản
     corpus[idx] = re.sub(r'\b\d+\b', '', article)
+
+classes = np.array(classes)
 
 with open(traning_path, 'r') as training_file:
     temp_trainingData = json.load(training_file)
@@ -102,4 +108,10 @@ for doc in queries:
 
 result = predict_with_tree_and_similarity(processed_queries)
 
-print(result)
+for row in result:
+    top_indices = np.argsort(row)[-3:]  # Chỉ số của top 3 xác suất
+    top_classes = classes[top_indices]       # Nhãn tương ứng
+    top_proba = row[top_indices] 
+    print(top_classes)
+    print(top_proba)
+    
