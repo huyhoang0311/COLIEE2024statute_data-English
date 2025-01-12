@@ -1,4 +1,7 @@
+<<<<<<< HEAD
  
+=======
+>>>>>>> e2b5852137d76c86df19d1063692658a6c11cd41
 import re
 import json
 import string
@@ -36,8 +39,12 @@ def predict_with_tree_and_similarity(queries):
 
     return predicted_label_proba
 
+<<<<<<< HEAD
 articles_path = r'text\articles.json'
 traning_path = r"/train\TrainingData.json"
+=======
+json_path = r'text/articles.json'
+>>>>>>> e2b5852137d76c86df19d1063692658a6c11cd41
 
 # Khởi tạo lemmatizer
 lemmatizer = WordNetLemmatizer()
