@@ -3,17 +3,16 @@ from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 import nltk
 
-# Tải bộ dữ liệu cần thiết cho NLTK
 nltk.download('punkt_tab')
 
 # Đọc nội dung từ file JSON
 def load_json_file(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
 # Chuyển dữ liệu thành corpus (danh sách các văn bản)
 def create_corpus(data):
-    return [article.replace("\n", " ") for article in data]
+    return [content.replace("\n", " ") for content in data.values()]
 
 # Token hóa văn bản
 def tokenize_corpus(corpus):
@@ -21,39 +20,48 @@ def tokenize_corpus(corpus):
 
 # Áp dụng BM25 để xếp hạng văn bản
 def apply_bm25(corpus, query):
-    # Token hóa các văn bản và truy vấn
     tokenized_corpus = tokenize_corpus(corpus)
     tokenized_query = word_tokenize(query.lower())
-
-    # Tạo đối tượng BM25 và tính toán điểm cho mỗi văn bản
     bm25 = BM25Okapi(tokenized_corpus)
     scores = bm25.get_scores(tokenized_query)
-    
     return scores
 
-# Đọc và xử lý file JSON
-file_path = r'text/articles.json'  # Thay 'your_file.json' bằng đường dẫn file JSON của bạn
-data = load_json_file(file_path)
+# Đánh giá độ chính xác
+def evaluate_accuracy(corpus, training_data, top_k=3):
+    correct = 0
+    total = len(training_data)
+    corpus_keys = list(articles.keys())
 
-# Kiểm tra dữ liệu đã được load chính xác
-if isinstance(data, list):
-    corpus = create_corpus(data)
+    for item in training_data:
+        for query, expected_keys in item.items():
+            query = query.strip()
+            scores = apply_bm25(corpus, query)
+            top_k_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+            top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
+            
+            # Kiểm tra nếu bất kỳ kết quả nào khớp với kết quả mong đợi
+            if any(key in expected_keys for key in top_k_keys):
+                correct += 1
+
+    accuracy = correct / total if total > 0 else 0
+    return accuracy
+
+# Đọc dữ liệu
+articles_path = r'text/articles.json'
+training_data_path = r'text/TrainingData.json'
+
+articles = load_json_file(articles_path)
+training_data = load_json_file(training_data_path)
+
+if isinstance(articles, dict):
+    corpus = create_corpus(articles)
 else:
-    print("Dữ liệu không phải là danh sách các bài viết.")
+    print("Dữ liệu articles.json không đúng định dạng.")
     corpus = []
 
-# Truy vấn tìm kiếm
-query = "A special provision that releases warranty can be made, but in that situation, when there are rights that the seller establishes on his/her own for a third party, the seller is not released of warranty."
-
-# Áp dụng BM25 nếu corpus hợp lệ
-if corpus:
-    scores = apply_bm25(corpus, query)
-
-    # Lấy top 3 bài viết có điểm số cao nhất
-    top_3_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:3]
-
-    # In kết quả top 3 bài viết
-    for idx in top_3_idx:
-        print(f"Articles {idx+1}: Score {scores[idx]}")
+# Tính độ chính xác
+if corpus and isinstance(training_data, list):
+    accuracy = evaluate_accuracy(corpus, training_data, top_k=3)
+    print(f"Độ chính xác (Top-3): {accuracy * 100:.2f}%")
 else:
-    print("Không có văn bản để xử lý.")
+    print("Dữ liệu không hợp lệ.")
