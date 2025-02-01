@@ -3,6 +3,7 @@ from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 import nltk
 
+# Tải bộ dữ liệu cần thiết cho NLTK
 nltk.download('punkt_tab')
 
 # Đọc nội dung từ file JSON
