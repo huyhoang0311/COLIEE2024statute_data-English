@@ -13,7 +13,7 @@ def load_json_file(file_path):
 
 # Chuyển dữ liệu thành corpus (danh sách các văn bản)
 def create_corpus(data):
-    return [content.replace("\n", " ") for content in data.values()]
+    return [content.replace("\n", " ").strip() for content in data.values()]
 
 # Token hóa văn bản
 def tokenize_corpus(corpus):
@@ -33,23 +33,26 @@ def evaluate_accuracy(corpus, training_data, top_k=3):
     total = len(training_data)
     corpus_keys = list(articles.keys())
 
-    for item in training_data:
-        for query, expected_keys in item.items():
-            query = query.strip()
-            scores = apply_bm25(corpus, query)
-            top_k_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
-            top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
-            
-            # Kiểm tra nếu bất kỳ kết quả nào khớp với kết quả mong đợi
-            if any(key in expected_keys for key in top_k_keys):
-                correct += 1
+    for query, expected_keys in training_data.items():
+        query = query.strip()  # Xóa khoảng trắng thừa
+        scores = apply_bm25(corpus, query)  # Tính điểm BM25
+        top_k_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+        top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
+        
+        print(f"Query: {query}")
+        print(f"Answer:{expected_keys}")
+        print(f"Top-{top_k} Results: {top_k_keys}")
+        
+        # Kiểm tra nếu bất kỳ kết quả nào khớp với kết quả mong đợi
+        if any(key in expected_keys for key in top_k_keys):
+            correct += 1
 
     accuracy = correct / total if total > 0 else 0
     return accuracy
 
 # Đọc dữ liệu
-articles_path = r'text/articles.json'
-training_data_path = r'text/TrainingData.json'
+articles_path = r'text/articlesFull.json'
+training_data_path = r'text/TrainingData(2).json'
 
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
@@ -61,7 +64,7 @@ else:
     corpus = []
 
 # Tính độ chính xác
-if corpus and isinstance(training_data, list):
+if corpus and isinstance(training_data, dict):
     accuracy = evaluate_accuracy(corpus, training_data, top_k=3)
     print(f"Độ chính xác (Top-3): {accuracy * 100:.2f}%")
 else:
