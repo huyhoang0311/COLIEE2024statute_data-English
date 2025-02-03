@@ -2,9 +2,10 @@ import json
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 import nltk
-
+import os
+print(os.listdir('/kaggle/input'))
 # Tải bộ dữ liệu cần thiết cho NLTK
-nltk.download('punkt_tab')
+nltk.download('punkt')
 
 # Đọc nội dung từ file JSON
 def load_json_file(file_path):
@@ -40,7 +41,7 @@ def evaluate_accuracy(corpus, training_data, top_k=3):
         top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
         
         print(f"Query: {query}")
-        print(f"Answer:{expected_keys}")
+        print (f"Expected answers: {expected_keys}")
         print(f"Top-{top_k} Results: {top_k_keys}")
         
         # Kiểm tra nếu bất kỳ kết quả nào khớp với kết quả mong đợi
@@ -51,8 +52,8 @@ def evaluate_accuracy(corpus, training_data, top_k=3):
     return accuracy
 
 # Đọc dữ liệu
-articles_path = r'text/articlesFull.json'
-training_data_path = r'text/TrainingData(2).json'
+articles_path = "text/articlesFull.json"
+training_data_path = "text/TrainingData(2).json"
 
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
