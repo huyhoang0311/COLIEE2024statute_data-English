@@ -2,10 +2,8 @@ import json
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 import nltk
-import os
-print(os.listdir('/kaggle/input'))
 # Tải bộ dữ liệu cần thiết cho NLTK
-nltk.download('punkt')
+nltk.download('punkt_tab')
 
 # Đọc nội dung từ file JSON
 def load_json_file(file_path):
@@ -29,7 +27,7 @@ def apply_bm25(corpus, query):
     return scores
 
 # Đánh giá độ chính xác
-def evaluate_accuracy(corpus, training_data, top_k=3):
+def evaluate_accuracy(corpus, training_data, top_k):
     correct = 0
     total = len(training_data)
     corpus_keys = list(articles.keys())
@@ -66,7 +64,7 @@ else:
 
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
-    accuracy = evaluate_accuracy(corpus, training_data, top_k=3)
-    print(f"Độ chính xác (Top-3): {accuracy * 100:.2f}%")
+    accuracy = evaluate_accuracy(corpus, training_data, top_k=1)
+    print(f"Độ chính xác (Top-1): {accuracy * 100:.2f}%")
 else:
     print("Dữ liệu không hợp lệ.")
