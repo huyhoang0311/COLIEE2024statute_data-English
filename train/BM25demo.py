@@ -26,32 +26,57 @@ def apply_bm25(corpus, query):
     scores = bm25.get_scores(tokenized_query)
     return scores
 
-# Đánh giá độ chính xác
-def evaluate_accuracy(corpus, training_data, top_k):
-    correct = 0
-    total = len(training_data)
-    corpus_keys = list(articles.keys())
+#đo f2_score
+def evaluate_F2_single(label_set, predict_set):
+    correct_retrieved = len(label_set.intersection(predict_set))
+    precision = correct_retrieved / len(predict_set) if len(predict_set) > 0 else 0
+    recall = correct_retrieved / len(label_set) if len(label_set) > 0 else 0
+    if precision + recall == 0:
+        f2_measure = 0
+    else:
+        f2_measure = (5 * precision * recall) / (4 * precision + recall)
+    return precision, recall, f2_measure
 
+def evaluate_F2_overall(queries):
+    total_precision = 0
+    total_recall = 0
+    num_queries = len(queries)
+    for label_set, predict_set in queries:
+        precision, recall, _ = evaluate_F2_single(label_set, predict_set)
+        total_precision += precision
+        total_recall += recall
+    avg_precision = total_precision / num_queries if num_queries > 0 else 0
+    avg_recall = total_recall / num_queries if num_queries > 0 else 0
+    if avg_precision + avg_recall == 0:
+        overall_f2 = 0
+    else:
+        overall_f2 = (5 * avg_precision * avg_recall) / (4 * avg_precision + avg_recall)
+
+    return overall_f2
+# Đánh giá độ chính xác
+def evaluate_accuracy(corpus, article, training_data, top_k):
+    corpus_keys = list(article.keys())
+    total_queries = []
     for query, expected_keys in training_data.items():
         query = query.strip()  # Xóa khoảng trắng thừa
         scores = apply_bm25(corpus, query)  # Tính điểm BM25
         top_k_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
         top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
         
-        print(f"Query: {query}")
+        #print(f"Query: {query}")
         print (f"Expected answers: {expected_keys}")
         print(f"Top-{top_k} Results: {top_k_keys}")
         
-        # Kiểm tra nếu bất kỳ kết quả nào khớp với kết quả mong đợi
-        if any(key in expected_keys for key in top_k_keys):
-            correct += 1
-
-    accuracy = correct / total if total > 0 else 0
-    return accuracy
+        label_set = set(expected_keys)
+        total_queries.append((label_set, top_k_keys))
+     
+    overall_f2 = evaluate_F2_overall(total_queries)
+    print(f"F2-Score tổng thể: {overall_f2:.4f}")
+    return overall_f2
 
 # Đọc dữ liệu
-articles_path = "text/articlesFull.json"
-training_data_path = "text/TrainingData(2).json"
+articles_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/articlesFull.json"
+training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/TrainingData(2).json"
 
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
@@ -64,7 +89,8 @@ else:
 
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
-    accuracy = evaluate_accuracy(corpus, training_data, top_k=1)
-    print(f"Độ chính xác (Top-1): {accuracy * 100:.2f}%")
+    top_k = 1
+    accuracy = evaluate_accuracy(corpus, articles, training_data, top_k)
+    print(f"Độ chính xác (Top- :{top_k} ): {accuracy * 100:.2f}%")
 else:
     print("Dữ liệu không hợp lệ.")
