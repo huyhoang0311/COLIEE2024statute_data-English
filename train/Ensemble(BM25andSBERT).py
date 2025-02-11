@@ -7,7 +7,6 @@ from sentence_transformers import SentenceTransformer, util
 import nltk
 
 
-# Tải bộ dữ liệu cần thiết cho NLTK
 nltk.download('punkt_tab')
 
 # Load mô hình SBERT
@@ -30,10 +29,10 @@ def rerank_with_sbert(query, top_k_docs):
     return cosine_scores.squeeze().cpu().numpy()
 
 # Đánh giá độ chính xác
-def evaluate_accuracy(corpus, training_data, top_k_bm25, top_k_rerank):
+def evaluate_accuracy(corpus,article ,training_data, top_k_bm25, top_k_rerank):
     correct = 0
     total = len(training_data)
-    corpus_keys = list(articles.keys())
+    corpus_keys = list(article.keys())
 
     for query, expected_keys in training_data.items():
         query = query.strip()  # Xóa khoảng trắng thừa
@@ -77,7 +76,7 @@ else:
 if corpus and isinstance(training_data, dict):
     top_k_bm25 = 20  # Số lượng top-k từ BM25
     top_k_rerank = 3  # Số lượng top-k sau rerank
-    accuracy = evaluate_accuracy(corpus, training_data, top_k_bm25, top_k_rerank)
+    accuracy = evaluate_accuracy(corpus,articles,training_data, top_k_bm25, top_k_rerank)
     print(f"Độ chính xác (Top-{top_k_rerank} sau rerank): {accuracy * 100:.2f}%")
 else:
     print("Dữ liệu không hợp lệ.")
