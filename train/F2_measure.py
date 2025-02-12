@@ -23,4 +23,4 @@ def evaluate_F2_overall(queries):
     else:
         overall_f2 = (5 * avg_precision * avg_recall) / (4 * avg_precision + avg_recall)
 
-    return overall_f2
+    return avg_precision, avg_recall,overall_f2

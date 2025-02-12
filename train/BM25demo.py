@@ -26,7 +26,8 @@ def apply_bm25(corpus, query):
     scores = bm25.get_scores(tokenized_query)
     return scores
 
-#đo f2_score
+
+#sử dụng F2_score để tính
 def evaluate_F2_single(label_set, predict_set):
     correct_retrieved = len(label_set.intersection(predict_set))
     precision = correct_retrieved / len(predict_set) if len(predict_set) > 0 else 0
@@ -52,7 +53,8 @@ def evaluate_F2_overall(queries):
     else:
         overall_f2 = (5 * avg_precision * avg_recall) / (4 * avg_precision + avg_recall)
 
-    return overall_f2
+    return avg_precision, avg_recall, overall_f2
+
 # Đánh giá độ chính xác
 def evaluate_accuracy(corpus, article, training_data, top_k):
     corpus_keys = list(article.keys())
@@ -70,13 +72,18 @@ def evaluate_accuracy(corpus, article, training_data, top_k):
         label_set = set(expected_keys)
         total_queries.append((label_set, top_k_keys))
      
-    overall_f2 = evaluate_F2_overall(total_queries)
-    print(f"F2-Score tổng thể: {overall_f2:.4f}")
-    return overall_f2
+    _,overall_recall,_= evaluate_F2_overall(total_queries)
+    print(f"Điểm recall tổng thể: {overall_recall:.4f}")
+    return overall_recall
 
 # Đọc dữ liệu
-articles_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/articlesFull.json"
-training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/TrainingData(2).json"
+#articles_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/articlesFull.json"
+#training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/TrainingData(2).json"
+
+articles_path = "text/articlesFull.json"
+training_data_path = "text/TrainingData(2).json"
+
+
 
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
