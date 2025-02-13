@@ -2,6 +2,9 @@ import json
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 import nltk
+import numpy as np
+import csv
+import pandas as pd
 # Tải bộ dữ liệu cần thiết cho NLTK
 nltk.download('punkt_tab')
 
@@ -18,16 +21,7 @@ def create_corpus(data):
 def tokenize_corpus(corpus):
     return [word_tokenize(doc.lower()) for doc in corpus]
 
-# Áp dụng BM25 để xếp hạng văn bản
-def apply_bm25(corpus, query):
-    tokenized_corpus = tokenize_corpus(corpus)
-    tokenized_query = word_tokenize(query.lower())
-    bm25 = BM25Okapi(tokenized_corpus)
-    scores = bm25.get_scores(tokenized_query)
-    return scores
-
-
-#sử dụng F2_score để tính
+# Đánh giá F2-score
 def evaluate_F2_single(label_set, predict_set):
     correct_retrieved = len(label_set.intersection(predict_set))
     precision = correct_retrieved / len(predict_set) if len(predict_set) > 0 else 0
@@ -52,28 +46,22 @@ def evaluate_F2_overall(queries):
         overall_f2 = 0
     else:
         overall_f2 = (5 * avg_precision * avg_recall) / (4 * avg_precision + avg_recall)
-
     return avg_precision, avg_recall, overall_f2
 
-# Đánh giá độ chính xác
-def evaluate_accuracy(corpus, article, training_data, top_k):
-    corpus_keys = list(article.keys())
+# Đánh giá Recall theo top_k
+def evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, scores_per_query, top_k):
+    corpus_keys = list(articles.keys())
     total_queries = []
+
     for query, expected_keys in training_data.items():
-        query = query.strip()  # Xóa khoảng trắng thừa
-        scores = apply_bm25(corpus, query)  # Tính điểm BM25
-        top_k_idx = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+        scores = scores_per_query[query]
+        top_k_idx = np.argsort(scores)[-top_k:][::-1]  # Lấy top-k nhanh bằng numpy
         top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
-        
-        #print(f"Query: {query}")
-        #print (f"Expected answers: {expected_keys}")
-        #print(f"Top-{top_k} Results: {top_k_keys}")
-        
+
         label_set = set(expected_keys)
         total_queries.append((label_set, top_k_keys))
-     
-    _,overall_recall,_= evaluate_F2_overall(total_queries)
-    print(f"Điểm recall tổng thể: {overall_recall:.4f}")
+
+    _, overall_recall, _ = evaluate_F2_overall(total_queries)
     return overall_recall
 
 # Đọc dữ liệu
@@ -96,9 +84,25 @@ else:
 
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
-    for i in range (1,201) :
-        top_k = i
-        accuracy = evaluate_accuracy(corpus, articles, training_data, top_k)
-        print(f"Độ chính xác (Top- :{top_k} ): {accuracy * 100:.2f}%")
+    tokenized_corpus = tokenize_corpus(corpus)
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    # Tính trước điểm số cho mỗi query để không phải chạy lại nhiều lần
+    scores_per_query = {
+        query: bm25.get_scores(word_tokenize(query.lower()))
+        for query in training_data.keys()
+    }
+    top_ = []
+    recall_ = []
+
+    for top_k in range(1, 501):
+        recall = evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, scores_per_query, top_k)
+        print(f"Recall (Top-{top_k}): {recall * 100:.2f}%")
+        recall = round(recall,4)
+        top_.append(top_k)
+        recall_.append(recall)
+    df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
+    df.to_csv("BM25_recall_result",index = False)   
+
 else:
     print("Dữ liệu không hợp lệ.")
