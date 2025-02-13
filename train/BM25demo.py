@@ -57,6 +57,7 @@ def evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, sco
         scores = scores_per_query[query]
         top_k_idx = np.argsort(scores)[-top_k:][::-1]  # Lấy top-k nhanh bằng numpy
         top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
+        
 
         label_set = set(expected_keys)
         total_queries.append((label_set, top_k_keys))

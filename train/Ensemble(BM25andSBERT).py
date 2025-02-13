@@ -1,16 +1,32 @@
-from train.processJsonfile import tokenize_corpus
-from train.processJsonfile import create_corpus
-from train.processJsonfile import load_json_file
+
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 from sentence_transformers import SentenceTransformer, util
 import nltk
+import numpy as np
+import pandas as pd
+import json
 
 
 nltk.download('punkt_tab')
 
 # Load mô hình SBERT
 sbert_model = SentenceTransformer('all-mpnet-base-v2')
+
+# Đọc nội dung từ file JSON
+def load_json_file(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return json.load(file)
+
+# Chuyển dữ liệu thành corpus (danh sách các văn bản)
+def create_corpus(data):
+    return [content.replace("\n", " ").strip() for content in data.values()]
+
+# Token hóa văn bản
+def tokenize_corpus(corpus):
+    return [word_tokenize(doc.lower()) for doc in corpus]
+
+
 
 
 # Áp dụng BM25 để xếp hạng văn bản
@@ -28,37 +44,67 @@ def rerank_with_sbert(query, top_k_docs):
     cosine_scores = util.pytorch_cos_sim(query_embedding, doc_embeddings)
     return cosine_scores.squeeze().cpu().numpy()
 
+# Đánh giá F2-score
+def evaluate_F2_single(label_set, predict_set):
+    correct_retrieved = len(label_set.intersection(predict_set))
+    precision = correct_retrieved / len(predict_set) if len(predict_set) > 0 else 0
+    recall = correct_retrieved / len(label_set) if len(label_set) > 0 else 0
+    if precision + recall == 0:
+        f2_measure = 0
+    else:
+        f2_measure = (5 * precision * recall) / (4 * precision + recall)
+    return precision, recall, f2_measure
+
+def evaluate_F2_overall(queries):
+    total_precision = 0
+    total_recall = 0
+    num_queries = len(queries)
+    for label_set, predict_set in queries:
+        precision, recall, _ = evaluate_F2_single(label_set, predict_set)
+        total_precision += precision
+        total_recall += recall
+    avg_precision = total_precision / num_queries if num_queries > 0 else 0
+    avg_recall = total_recall / num_queries if num_queries > 0 else 0
+    if avg_precision + avg_recall == 0:
+        overall_f2 = 0
+    else:
+        overall_f2 = (5 * avg_precision * avg_recall) / (4 * avg_precision + avg_recall)
+    return avg_precision, avg_recall, overall_f2
+
+
+
+
 # Đánh giá độ chính xác
-def evaluate_accuracy(corpus,article ,training_data, top_k_bm25, top_k_rerank):
-    correct = 0
-    total = len(training_data)
+def evaluate_F2_score(corpus,article ,training_data,scores_per_query ,top_k_bm25, top_k_rerank):
+    total_queries = []
     corpus_keys = list(article.keys())
 
     for query, expected_keys in training_data.items():
-        query = query.strip()  # Xóa khoảng trắng thừa
-        bm25_scores = apply_bm25(corpus, query)  # Tính điểm BM25
+        #Lấy điểm BM25 sẵn
+        scores = scores_per_query[query]
+
         
         # Lấy top-k từ BM25
-        top_k_bm25_idx = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:top_k_bm25]
+        top_k_bm25_idx = np.argsort(scores)[-top_k_bm25:][::-1]
         top_k_bm25_docs = [corpus[idx] for idx in top_k_bm25_idx]
         top_k_bm25_keys = [corpus_keys[idx] for idx in top_k_bm25_idx]
         
         # Sử dụng SBERT để rerank top-k BM25
         rerank_scores = rerank_with_sbert(query, top_k_bm25_docs)
-        final_ranking_idx = sorted(range(len(rerank_scores)), key=lambda i: rerank_scores[i], reverse=True)[:top_k_rerank]
+        final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
         final_top_keys = [top_k_bm25_keys[idx] for idx in final_ranking_idx]
 
-        print(f"Query: {query}")
-        print(f"Expected answers: {expected_keys}")
-        print(f"Top-{top_k_rerank} Results after rerank: {final_top_keys}")
+        #print(f"Query: {query}")
+        #print(f"Expected answers: {expected_keys}")
+        #print(f"Top-{top_k_rerank} Results after rerank: {final_top_keys}")
 
         # Kiểm tra nếu bất kỳ kết quả nào khớp với kết quả mong đợi
-        if any(key in expected_keys for key in final_top_keys):
-            correct += 1
+        
+        label_set = set(expected_keys)
+        total_queries.append((label_set, final_top_keys))
 
-    accuracy = correct / total if total > 0 else 0
-    return accuracy
-
+    _, _, f2 = evaluate_F2_overall(total_queries)
+    return f2
 # Đọc dữ liệu
 articles_path = "text/articlesFull.json"
 training_data_path = "text/TrainingData(2).json"
@@ -76,7 +122,16 @@ else:
 if corpus and isinstance(training_data, dict):
     top_k_bm25 = 20  # Số lượng top-k từ BM25
     top_k_rerank = 3  # Số lượng top-k sau rerank
-    accuracy = evaluate_accuracy(corpus,articles,training_data, top_k_bm25, top_k_rerank)
+    tokenized_corpus = tokenize_corpus(corpus)
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    # Tính trước điểm số cho mỗi query để không phải chạy lại nhiều lần
+    scores_per_query = {
+        query: bm25.get_scores(word_tokenize(query.lower()))
+        for query in training_data.keys()
+    }
+   
+    accuracy = evaluate_F2_score(corpus, articles, training_data, scores_per_query, top_k_bm25, top_k_rerank)
     print(f"Độ chính xác (Top-{top_k_rerank} sau rerank): {accuracy * 100:.2f}%")
 else:
     print("Dữ liệu không hợp lệ.")
