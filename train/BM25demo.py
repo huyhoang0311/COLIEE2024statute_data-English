@@ -66,8 +66,8 @@ def evaluate_accuracy(corpus, article, training_data, top_k):
         top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
         
         #print(f"Query: {query}")
-        print (f"Expected answers: {expected_keys}")
-        print(f"Top-{top_k} Results: {top_k_keys}")
+        #print (f"Expected answers: {expected_keys}")
+        #print(f"Top-{top_k} Results: {top_k_keys}")
         
         label_set = set(expected_keys)
         total_queries.append((label_set, top_k_keys))
@@ -96,8 +96,9 @@ else:
 
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
-    top_k = 1
-    accuracy = evaluate_accuracy(corpus, articles, training_data, top_k)
-    print(f"Độ chính xác (Top- :{top_k} ): {accuracy * 100:.2f}%")
+    for i in range (1,201) :
+        top_k = i
+        accuracy = evaluate_accuracy(corpus, articles, training_data, top_k)
+        print(f"Độ chính xác (Top- :{top_k} ): {accuracy * 100:.2f}%")
 else:
     print("Dữ liệu không hợp lệ.")
