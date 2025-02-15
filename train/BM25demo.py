@@ -86,7 +86,11 @@ else:
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
     tokenized_corpus = tokenize_corpus(corpus)
-    bm25 = BM25Okapi(tokenized_corpus)
+
+    #điều chỉnh tham số bm25
+    #k1 = 1.55
+    #b = 0.8
+    bm25 = BM25Okapi(tokenized_corpus,k1=1,b=1.2)
 
     # Tính trước điểm số cho mỗi query để không phải chạy lại nhiều lần
     scores_per_query = {
@@ -96,14 +100,23 @@ if corpus and isinstance(training_data, dict):
     top_ = []
     recall_ = []
 
-    for top_k in range(1, 501):
+    # for top_k in range(1, 501):
+    #     recall = evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, scores_per_query, top_k)
+    #     print(f"Recall (Top-{top_k}): {recall * 100:.2f}%")
+    #     recall = round(recall,4)
+    #     top_.append(top_k)
+    #     recall_.append(recall)
+    #df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
+    #df.to_csv("BM25_recall_result",index = False)   
+
+    top_k_list = [40,80,100,150,250,500]
+    for top_k in top_k_list :
         recall = evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, scores_per_query, top_k)
         print(f"Recall (Top-{top_k}): {recall * 100:.2f}%")
         recall = round(recall,4)
         top_.append(top_k)
         recall_.append(recall)
-    df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
-    df.to_csv("BM25_recall_result",index = False)   
-
+    #df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
+    #df.to_csv("BM25_recall_result_with_BM25", index=False)
 else:
     print("Dữ liệu không hợp lệ.")

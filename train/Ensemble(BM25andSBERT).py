@@ -11,7 +11,7 @@ import json
 nltk.download('punkt_tab')
 
 # Load mô hình SBERT
-sbert_model = SentenceTransformer('all-mpnet-base-v2')
+sbert_model = SentenceTransformer('sentence-transformers/msmarco-legalbert-base-v1', device='cuda')
 
 # Đọc nội dung từ file JSON
 def load_json_file(file_path):
