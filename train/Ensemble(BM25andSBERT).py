@@ -123,7 +123,7 @@ if corpus and isinstance(training_data, dict):
     top_k_bm25 = 20  # Số lượng top-k từ BM25
     top_k_rerank = 3  # Số lượng top-k sau rerank
     tokenized_corpus = tokenize_corpus(corpus)
-    bm25 = BM25Okapi(tokenized_corpus)
+    bm25 = BM25Okapi(tokenized_corpus,k1=1,b=1.2)
 
     # Tính trước điểm số cho mỗi query để không phải chạy lại nhiều lần
     scores_per_query = {
