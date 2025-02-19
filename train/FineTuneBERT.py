@@ -6,7 +6,7 @@ import pandas as pd
 model = SentenceTransformer('nlpaueb/legal-bert-base-uncased', device='cuda')
 
 # Đọc tập train_triplets.csv vừa tạo
-df = pd.read_csv("/kaggle/working/train_triplets.csv")
+df = pd.read_csv("/kaggle/input/coliee/COLIEE2024statute_data-English-kaggle-mode/text/train_triplets.csv")
 
 # Chuyển thành dạng InputExample để huấn luyện
 train_samples = []
