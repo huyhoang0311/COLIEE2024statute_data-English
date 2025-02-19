@@ -1,6 +1,8 @@
 from sentence_transformers import SentenceTransformer, InputExample, losses
 from torch.utils.data import DataLoader
 import pandas as pd
+import os
+os.environ["WANDB_DISABLED"] = "true"
 
 # Load mô hình LegalBERT để fine-tune
 model = SentenceTransformer('nlpaueb/legal-bert-base-uncased', device='cuda')
