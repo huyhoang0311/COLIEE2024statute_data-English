@@ -65,6 +65,9 @@ def evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, sco
     _, overall_recall, _ = evaluate_F2_overall(total_queries)
     return overall_recall
 
+
+
+
 # Đọc dữ liệu
 #articles_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/articlesFull.json"
 #training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/TrainingData(2).json"
