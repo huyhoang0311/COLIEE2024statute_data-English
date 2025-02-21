@@ -1,4 +1,3 @@
-
 from rank_bm25 import BM25Okapi
 from nltk.tokenize import word_tokenize
 from sentence_transformers import SentenceTransformer, util
@@ -6,14 +5,13 @@ import nltk
 import numpy as np
 import pandas as pd
 import json
-import math
+
 
 nltk.download('punkt_tab')
 
-# Load mô hình SBERT
-#sbert_model = SentenceTransformer('sentence-transformers/msmarco-legalbert-base-v1', device='cuda')
+#sbert_model = SentenceTransformer('all-mpnet-base-v2', device='cuda')
 sbert_model = SentenceTransformer('/kaggle/working/fine_tuned_legalbert', device='cuda')
-
+#sbert_model = SentenceTransformer('nlpaueb/legal-bert-base-uncased', device='cuda')
 # Đọc nội dung từ file JSON
 def load_json_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -26,8 +24,6 @@ def create_corpus(data):
 # Token hóa văn bản
 def tokenize_corpus(corpus):
     return [word_tokenize(doc.lower()) for doc in corpus]
-
-
 
 
 # Áp dụng BM25 để xếp hạng văn bản
@@ -74,6 +70,10 @@ def evaluate_F2_overall(queries):
 
 
 
+def get_top_by_threshold(scores, corpus_keys, threshold):
+    filtered_idxs = [i for i, score in enumerate(scores) if score >= threshold]
+    return filtered_idxs
+
 
 # Đánh giá độ chính xác
 def evaluate_F2_score(corpus,article ,training_data,scores_per_query ,top_k_bm25, top_k_rerank):
@@ -86,13 +86,16 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query ,top_k_bm25
 
         
         # Lấy top-k từ BM25
-        top_k_bm25_idx = np.argsort(scores)[-top_k_bm25:][::-1]
+        #top_k_bm25_idx = np.argsort(scores)[-top_k_bm25:][::-1]
+        top_k_bm25_idx = get_top_by_threshold(scores,corpus_keys,0.8)
         top_k_bm25_docs = [corpus[idx] for idx in top_k_bm25_idx]
         top_k_bm25_keys = [corpus_keys[idx] for idx in top_k_bm25_idx]
         
         # Sử dụng SBERT để rerank top-k BM25
         rerank_scores = rerank_with_sbert(query, top_k_bm25_docs)
-        final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
+        #final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
+        final_ranking_idx = get_top_by_threshold(rerank_scores,corpus_keys,0.5)
+        
         final_top_keys = [top_k_bm25_keys[idx] for idx in final_ranking_idx]
 
         #print(f"Query: {query}")
@@ -104,11 +107,15 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query ,top_k_bm25
         label_set = set(expected_keys)
         total_queries.append((label_set, final_top_keys))
 
-    _, _, f2 = evaluate_F2_overall(total_queries)
-    return f2
+    precision,recall, f2 = evaluate_F2_overall(total_queries)
+    return precision,recall,f2
 # Đọc dữ liệu
-articles_path = "text/articlesFull.json"
-training_data_path = "text/TrainingData(2).json"
+articles_path = "/kaggle/input/coliee-update-2024/COLIEE2024statute_data-English/text/articlesFull.json"
+#training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English-kaggle-mode/train/validation.json"
+training_data_path = "/kaggle/input/coliee-update-2024/COLIEE2024statute_data-English/train/test.json"
+
+
+
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
 
@@ -120,10 +127,10 @@ else:
 
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
-    top_k_bm25 = 20  # Số lượng top-k từ BM25
-    top_k_rerank = 3  # Số lượng top-k sau rerank
+    top_k_bm25 = 500  # Số lượng top-k từ BM25
+    top_k_rerank = 1 # Số lượng top-k sau rerank
     tokenized_corpus = tokenize_corpus(corpus)
-    bm25 = BM25Okapi(tokenized_corpus,k1=1,b=1.2)
+    bm25 = BM25Okapi(tokenized_corpus)
 
     # Tính trước điểm số cho mỗi query để không phải chạy lại nhiều lần
     scores_per_query = {
@@ -131,7 +138,9 @@ if corpus and isinstance(training_data, dict):
         for query in training_data.keys()
     }
    
-    accuracy = evaluate_F2_score(corpus, articles, training_data, scores_per_query, top_k_bm25, top_k_rerank)
+    precision,recall,accuracy = evaluate_F2_score(corpus, articles, training_data, scores_per_query, top_k_bm25, top_k_rerank)
     print(f"Độ chính xác (Top-{top_k_rerank} sau rerank): {accuracy * 100:.2f}%")
+    print(precision)
+    print(recall)
 else:
     print("Dữ liệu không hợp lệ.")
