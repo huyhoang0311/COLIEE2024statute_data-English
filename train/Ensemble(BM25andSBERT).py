@@ -109,7 +109,6 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query ,top_k_bm25
 # Đọc dữ liệu
 articles_path = "text/articlesFull.json"
 training_data_path = "text/TrainingData(2).json"
-
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
 
