@@ -73,7 +73,7 @@ def evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, sco
 #training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/TrainingData(2).json"
 
 articles_path = "text/articlesFull.json"
-training_data_path = "text/TrainingData(2).json"
+training_data_path = "train/validation.json"
 
 
 
@@ -93,7 +93,7 @@ if corpus and isinstance(training_data, dict):
     #điều chỉnh tham số bm25
     #k1 = 1.55
     #b = 0.8
-    bm25 = BM25Okapi(tokenized_corpus,k1=1,b=1.2)
+    bm25 = BM25Okapi(tokenized_corpus)
 
     # Tính trước điểm số cho mỗi query để không phải chạy lại nhiều lần
     scores_per_query = {

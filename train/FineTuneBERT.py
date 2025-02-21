@@ -5,10 +5,10 @@ import os
 os.environ["WANDB_DISABLED"] = "true"
 
 # Load mô hình LegalBERT để fine-tune
-model = SentenceTransformer('nlpaueb/legal-bert-base-uncased', device='cuda')
+model = SentenceTransformer('all-mpnet-base-v2', device='cuda')
 
 # Đọc tập train_triplets.csv vừa tạo
-df = pd.read_csv("/kaggle/input/coliee/COLIEE2024statute_data-English-kaggle-mode/text/train_triplets.csv")
+df = pd.read_csv("/kaggle/input/coliee-update-2024/COLIEE2024statute_data-English/text/train_triplets.csv")
 
 # Chuyển thành dạng InputExample để huấn luyện
 train_samples = []
