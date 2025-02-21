@@ -72,6 +72,7 @@ def evaluate_F2_overall(queries):
 
 def get_top_by_threshold(scores, corpus_keys, threshold):
     filtered_idxs = [i for i, score in enumerate(scores) if score >= threshold]
+    if not filtered_idxs : filtered_idxs = [i for i, score in enumerate(scores) if score == max(scores)]
     return filtered_idxs
 
 
@@ -94,8 +95,8 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query ,top_k_bm25
         # Sử dụng SBERT để rerank top-k BM25
         rerank_scores = rerank_with_sbert(query, top_k_bm25_docs)
         #final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
-        final_ranking_idx = get_top_by_threshold(rerank_scores,corpus_keys,0.5)
-        
+        final_ranking_idx = get_top_by_threshold(rerank_scores,corpus_keys,0.6)
+        if len(final_ranking_idx) >= top_k_rerank: final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
         final_top_keys = [top_k_bm25_keys[idx] for idx in final_ranking_idx]
 
         #print(f"Query: {query}")
@@ -111,8 +112,8 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query ,top_k_bm25
     return precision,recall,f2
 # Đọc dữ liệu
 articles_path = "/kaggle/input/coliee-update-2024/COLIEE2024statute_data-English/text/articlesFull.json"
-#training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English-kaggle-mode/train/validation.json"
-training_data_path = "/kaggle/input/coliee-update-2024/COLIEE2024statute_data-English/train/test.json"
+training_data_path = "/kaggle/input/coliee-update-2024/COLIEE2024statute_data-English/train/validation.json"
+#training_data_path = "/kaggle/input/coliee-update-2024/COLIEE2024statute_data-English/train/test.json"
 
 
 
