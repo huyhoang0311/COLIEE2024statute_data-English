@@ -57,13 +57,24 @@ def evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, sco
         scores = scores_per_query[query]
         top_k_idx = np.argsort(scores)[-top_k:][::-1]  # Lấy top-k nhanh bằng numpy
         top_k_keys = [corpus_keys[idx] for idx in top_k_idx]
-        
+        print(query)
+        print(top_k_keys[0])
+        for key in expected_keys:
+            if key in top_k_keys:
+                index = top_k_keys.index(key)
+                score = scores[top_k_idx[index]]
+                
+                print(f"Key: {key}, Final Rerank Score: {score:.4f}, Rank: {index}")
+            else:
+                print(f"Key: {key} không có trong danh sách kết quả")              
+
+
 
         label_set = set(expected_keys)
         total_queries.append((label_set, top_k_keys))
 
-    _, overall_recall, _ = evaluate_F2_overall(total_queries)
-    return overall_recall
+    overall_precision, overall_recall, overall_f2 = evaluate_F2_overall(total_queries)
+    return overall_precision,overall_recall,overall_f2
 
 
 
@@ -73,7 +84,7 @@ def evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, sco
 #training_data_path = "/kaggle/input/coliee/COLIEE2024statute_data-English/text/TrainingData(2).json"
 
 articles_path = "text/articlesFull.json"
-training_data_path = "train/validation.json"
+training_data_path = "train/test.json"
 
 
 
@@ -112,13 +123,16 @@ if corpus and isinstance(training_data, dict):
     #df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
     #df.to_csv("BM25_recall_result",index = False)   
 
-    top_k_list = [40,80,100,150,250,500]
+    top_k_list = [700]
     for top_k in top_k_list :
-        recall = evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, scores_per_query, top_k)
+        precision,recall,f2 = evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, scores_per_query, top_k)
         print(f"Recall (Top-{top_k}): {recall * 100:.2f}%")
+        print(precision)
+        print(f2)
         recall = round(recall,4)
         top_.append(top_k)
         recall_.append(recall)
+
     #df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
     #df.to_csv("BM25_recall_result_with_BM25", index=False)
 else:
