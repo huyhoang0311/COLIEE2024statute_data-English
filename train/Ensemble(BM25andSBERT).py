@@ -25,19 +25,12 @@ def create_corpus(data):
 def tokenize_corpus(corpus):
     return [word_tokenize(doc.lower()) for doc in corpus]
 
-
-# Áp dụng BM25 để xếp hạng văn bản
-def apply_bm25(corpus, query):
-    tokenized_corpus = tokenize_corpus(corpus)
-    tokenized_query = word_tokenize(query.lower())
-    bm25 = BM25Okapi(tokenized_corpus)
-    scores = bm25.get_scores(tokenized_query)
-    return scores
+corpus_embedding = sbert_model.encode(corpus,convert_to_tensor=True)
 
 # Sử dụng SBERT để rerank kết quả BM25
-def rerank_with_sbert(query, top_k_docs):
+def rerank_with_sbert(query):
     query_embedding = sbert_model.encode(query, convert_to_tensor=True)
-    doc_embeddings = sbert_model.encode(top_k_docs, convert_to_tensor=True)
+    doc_embeddings = corpus_embedding
     cosine_scores = util.pytorch_cos_sim(query_embedding, doc_embeddings)
     return cosine_scores.squeeze().cpu().numpy()
 
@@ -83,7 +76,7 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_
     corpus_keys = list(article.keys())
 
     for query, expected_keys in training_data.items():
-        #Lấy điểm BM25 sẵn
+        #Lấy điểm sẵn
         scores = scores_per_query[query]
         rerank_score = bert_score_per_query[query]
 
@@ -100,11 +93,10 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_
         
         # Sử dụng SBERT để rerank top-k BM25
         #rerank_scores = rerank_with_sbert(query, top_k_bm25_docs)
-        #final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
-        final_ranking_idx = get_top_by_threshold(rerank_score,corpus_keys,0.5)
+        final_ranking_idx = np.argsort(rerank_score)[-top_k_rerank:][::-1]
+        #final_ranking_idx = get_top_by_threshold(rerank_score,corpus_keys,0.9)
         #if len(final_ranking_idx) >= 2: final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
-        final_top_keys = [top_k_bm25_keys[idx] for idx in final_ranking_idx]
-        
+        final_top_keys = [corpus_keys[idx] for idx in final_ranking_idx]
         
         
         #print(f"Query: {query}")
@@ -122,9 +114,7 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_
 articles_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/text/articlesFull.json"
 #training_data_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/train/validation.json"
 training_data_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/train/test.json"
-
-
-
+######################################
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
 
@@ -133,11 +123,25 @@ if isinstance(articles, dict):
 else:
     print("Dữ liệu articles.json không đúng định dạng.")
     corpus = []
+######################################
+if corpus:
+    corpus_embedding = sbert_model.encode(corpus,convert_to_tensor=True)
+
+# Sử dụng SBERT để rerank kết quả BM25
+def rerank_with_sbert(query):
+    query_embedding = sbert_model.encode(query, convert_to_tensor=True)
+    doc_embeddings = corpus_embedding
+    cosine_scores = util.pytorch_cos_sim(query_embedding, doc_embeddings)
+    return cosine_scores.squeeze().cpu().numpy()
+
+
+########################################
+
 
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
-    top_k_bm25 = 500  # Số lượng top-k từ BM25
-    top_k_rerank = 2 # Số lượng top-k sau rerank
+    top_k_bm25 = len(corpus)  # Số lượng top-k từ BM25
+    top_k_rerank = 1 # Số lượng top-k sau rerank
     tokenized_corpus = tokenize_corpus(corpus)
     bm25 = BM25Okapi(tokenized_corpus)
 
@@ -147,12 +151,23 @@ if corpus and isinstance(training_data, dict):
         query: bm25.get_scores(word_tokenize(query.lower()))
         for query in training_data.keys()
     }
-    bert_score_per_query = {
-        query : rerank_with_sbert(word_tokenize(query.lower()),corpus)
+    bert_scores_per_query = {
+        query : rerank_with_sbert(query)
         for query in training_data.keys()
     }
-   
-    precision,recall,accuracy = evaluate_F2_score(corpus, articles, training_data, scores_per_query,bert_score_per_query, top_k_bm25, top_k_rerank)
+    corpus_keys = list(articles.keys())    
+    #################################
+    df1 = pd.DataFrame.from_dict(scores_per_query,orient='index')
+    df1.columns = [f"{corpus_keys[idx]}" for idx in range (len(corpus_keys))]
+    df2 = pd.DataFrame.from_dict(bert_scores_per_query,orient='index')
+    df2.columns = [f"{corpus_keys[idx]}" for idx in range (len(corpus_keys))]
+    output_path_1 = "/kaggle/working/bm25point.csv"
+    output_path_2 = "/kaggle/working/bertpoint.csv"
+    df1.to_csv(output_path_1, index=True)
+    df2.to_csv(output_path_2,index=True)
+    ################################
+    
+    precision,recall,accuracy = evaluate_F2_score(corpus, articles, training_data, scores_per_query,bert_scores_per_query, top_k_bm25, top_k_rerank)
     print(f"Độ chính xác (Top-{top_k_rerank} sau rerank): {accuracy * 100:.2f}%")
     print(precision)
     print(recall)
