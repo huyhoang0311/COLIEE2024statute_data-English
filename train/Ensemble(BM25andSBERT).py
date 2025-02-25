@@ -25,7 +25,6 @@ def create_corpus(data):
 def tokenize_corpus(corpus):
     return [word_tokenize(doc.lower()) for doc in corpus]
 
-corpus_embedding = sbert_model.encode(corpus,convert_to_tensor=True)
 
 # Sử dụng SBERT để rerank kết quả BM25
 def rerank_with_sbert(query):
@@ -70,8 +69,20 @@ def get_top_by_threshold(scores, corpus_keys, threshold):
     return filtered_idxs
 
 
+
+def final_score(alpha, score_per_query, bert_score_per_query):
+    final_scores = {}
+
+    for query in score_per_query.keys():
+        bm25_scores = np.array(score_per_query[query])
+        sbert_scores = np.array(bert_score_per_query[query])
+        final_scores[query] = bm25_scores*alpha + (1-alpha)*sbert_scores
+            
+    return final_scores
+
+
 # Đánh giá độ chính xác
-def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_per_query ,top_k_bm25, top_k_rerank):
+def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_per_query,final_score_per_query ,top_k_bm25, top_k_rerank, threshold):
     total_queries = []
     corpus_keys = list(article.keys())
 
@@ -79,7 +90,7 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_
         #Lấy điểm sẵn
         scores = scores_per_query[query]
         rerank_score = bert_score_per_query[query]
-
+        final_scores = final_score_per_query[query]
         
         # Lấy top-k từ BM25
         top_k_bm25_idx = np.argsort(scores)[-top_k_bm25:][::-1]
@@ -93,9 +104,11 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_
         
         # Sử dụng SBERT để rerank top-k BM25
         #rerank_scores = rerank_with_sbert(query, top_k_bm25_docs)
-        final_ranking_idx = np.argsort(rerank_score)[-top_k_rerank:][::-1]
-        #final_ranking_idx = get_top_by_threshold(rerank_score,corpus_keys,0.9)
+        #final_ranking_idx = np.argsort(rerank_score)[-top_k_rerank:][::-1]
+        final_ranking_idx = get_top_by_threshold(final_scores,corpus_keys,threshold)
         #if len(final_ranking_idx) >= 2: final_ranking_idx = np.argsort(rerank_scores)[-top_k_rerank:][::-1]
+      
+      
         final_top_keys = [corpus_keys[idx] for idx in final_ranking_idx]
         
         
@@ -112,8 +125,8 @@ def evaluate_F2_score(corpus,article ,training_data,scores_per_query,bert_score_
     return precision,recall,f2
 # Đọc dữ liệu
 articles_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/text/articlesFull.json"
-#training_data_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/train/validation.json"
-training_data_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/train/test.json"
+training_data_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/train/validation.json"
+#training_data_path = "/kaggle/input/coliee-with-finetunebert/COLIEE2024statute_data-English/train/test.json"
 ######################################
 articles = load_json_file(articles_path)
 training_data = load_json_file(training_data_path)
@@ -137,6 +150,14 @@ def rerank_with_sbert(query):
 
 ########################################
 
+def min_max_normalization(score_per_query):
+    normalize_score ={}
+    for query, point in score_per_query.items():
+        max_in_point = max(point)
+        min_in_point = min(point)
+        normalize_score[query] = [(p - min_in_point) / (max_in_point - min_in_point) for p in point]
+    return normalize_score
+    
 
 # Tính độ chính xác
 if corpus and isinstance(training_data, dict):
@@ -155,21 +176,70 @@ if corpus and isinstance(training_data, dict):
         query : rerank_with_sbert(query)
         for query in training_data.keys()
     }
+    scores_per_query = min_max_normalization(scores_per_query)
+    bert_scores_per_query = min_max_normalization(bert_scores_per_query)
+    
     corpus_keys = list(articles.keys())    
     #################################
-    df1 = pd.DataFrame.from_dict(scores_per_query,orient='index')
-    df1.columns = [f"{corpus_keys[idx]}" for idx in range (len(corpus_keys))]
-    df2 = pd.DataFrame.from_dict(bert_scores_per_query,orient='index')
-    df2.columns = [f"{corpus_keys[idx]}" for idx in range (len(corpus_keys))]
-    output_path_1 = "/kaggle/working/bm25point.csv"
-    output_path_2 = "/kaggle/working/bertpoint.csv"
-    df1.to_csv(output_path_1, index=True)
-    df2.to_csv(output_path_2,index=True)
+    #df1 = pd.DataFrame.from_dict(scores_per_query,orient='index')
+    #df1.columns = [f"{corpus_keys[idx]}" for idx in range (len(corpus_keys))]
+    #df2 = pd.DataFrame.from_dict(bert_scores_per_query,orient='index')
+    #df2.columns = [f"{corpus_keys[idx]}" for idx in range (len(corpus_keys))]
+    #output_path_1 = "/kaggle/working/bm25point.csv"
+    #output_path_2 = "/kaggle/working/bertpoint.csv"
+    #df1.to_csv(output_path_1, index=True)
+    #df2.to_csv(output_path_2,index=True)
     ################################
+
+    #precision,recall,accuracy = evaluate_F2_score(corpus, articles, training_data, scores_per_query,bert_scores_per_query,final_scores_per_query, top_k_bm25, top_k_rerank)
+    #print(f"Độ chính xác (Top-{top_k_rerank} sau rerank): {accuracy * 100:.2f}%")
+    #print(precision)
+    #print(recall)
+
+    alphas = np.arange(0, 1.01, 0.01)  # Bao gồm cả 1.0
+    thresholds = np.arange(0, 1.01, 0.01)  
     
-    precision,recall,accuracy = evaluate_F2_score(corpus, articles, training_data, scores_per_query,bert_scores_per_query, top_k_bm25, top_k_rerank)
-    print(f"Độ chính xác (Top-{top_k_rerank} sau rerank): {accuracy * 100:.2f}%")
-    print(precision)
-    print(recall)
+    results = []
+    f2_max = 0
+    alpha_best = 0
+    threshold_best = 0
+    
+    for alpha in alphas:
+        final_scores_per_query = min_max_normalization(final_score(alpha, scores_per_query, bert_scores_per_query))
+    
+        for x in thresholds:
+            # Đánh giá trên tập validation
+            precision, recall, f2 = evaluate_F2_score(
+                corpus, articles, training_data, scores_per_query, bert_scores_per_query, final_scores_per_query,
+                top_k_bm25, top_k_rerank, threshold=x
+            )
+    
+            # Lưu kết quả vào danh sách
+            results.append({
+                "Alpha Score": alpha,
+                "Threshold": x,
+                "Precision": precision,
+                "Recall": recall,
+                "F2-score": f2
+            })
+    
+            # Cập nhật giá trị tốt nhất
+            if f2 > f2_max:
+                f2_max = f2
+                alpha_best = alpha
+                threshold_best = x
+    
+            print(f"Alpha: {alpha:.2f}, Threshold: {x:.2f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F2-score: {f2:.4f}")
+    
+    # 📝 Tạo DataFrame sau khi vòng lặp kết thúc
+    df_results = pd.DataFrame(results, columns=["Alpha Score", "Threshold", "Precision", "Recall", "F2-score"])   
+    
+    # 📂 Lưu kết quả vào CSV
+    output_path = "/kaggle/working/alpha_threshold_gridsearch.csv"
+    df_results.to_csv(output_path, index=False)
+    
+    print(f"\n✅ Kết quả tốt nhất: Alpha = {alpha_best}, Threshold = {threshold_best}, F2-score = {f2_max:.4f}")
+    print(f"📂 File kết quả đã lưu tại: {output_path}")
+    
 else:
     print("Dữ liệu không hợp lệ.")
