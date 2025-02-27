@@ -182,10 +182,15 @@ if corpus and isinstance(training_data, dict):
     #print(precision)
     #print(recall)
     ###################################
-    
+
     alphas = np.arange(0, 1.01, 0.01)  # Bao gồm cả 1.0
     thresholds = np.arange(0, 1.01, 0.01)  
     top_ks = np.arange(1,5,1)
+    #
+    #alphas = 0.15
+    #threshold = 0.4
+    #top_ks = 3
+    
     
     results = []
     f2_max = 0
