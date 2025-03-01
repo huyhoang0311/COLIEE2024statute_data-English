@@ -123,7 +123,7 @@ if corpus and isinstance(training_data, dict):
     #df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
     #df.to_csv("BM25_recall_result",index = False)   
 
-    top_k_list = [700]
+    top_k_list = [50]
     for top_k in top_k_list :
         precision,recall,f2 = evaluate_recall(corpus, articles, training_data, bm25, tokenized_corpus, scores_per_query, top_k)
         print(f"Recall (Top-{top_k}): {recall * 100:.2f}%")
@@ -133,7 +133,7 @@ if corpus and isinstance(training_data, dict):
         top_.append(top_k)
         recall_.append(recall)
 
-    #df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
-    #df.to_csv("BM25_recall_result_with_BM25", index=False)
+    df = pd.DataFrame({"Top_k":top_,"Recall point":recall_})
+    df.to_csv("BM25_recall_result_with_BM25_shortlist", index=False)
 else:
     print("Dữ liệu không hợp lệ.")
